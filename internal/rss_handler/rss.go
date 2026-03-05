@@ -1,6 +1,7 @@
 package rss_handler
 
 import (
+	"crypto/sha256"
 	"io"
 	"log/slog"
 	"net/http"
@@ -55,8 +56,9 @@ func (rh *RSSHandler) UpdateFeed() error {
 	rh.Articles = classArticles
 
 	for _, article := range rh.Articles {
-		println(article.Tag)
-		tn, err := rh.db.Get([]byte(article.Tag + ":" + article.Provider + ":" + article.Path))
+		hash := sha256.Sum256([]byte(article.Url))
+		article.UrlHash = hash[:]
+		tn, err := rh.db.Get([]byte("url:" + string(article.UrlHash)))
 		if err == nil {
 			slog.Debug("Article already exists")
 			article.Thumbnail = string(tn)
@@ -65,9 +67,14 @@ func (rh *RSSHandler) UpdateFeed() error {
 		rh.ws.ScrapeMeta(&article)
 		// Classify
 
-		err = rh.db.Insert([]byte(article.Tag+":"+article.Provider+":"+article.Path), []byte(article.Thumbnail))
+		slog.Debug("Inserting article", "url", article.Url)
+		err = rh.db.Insert([]byte("url:"+string(article.UrlHash)), []byte(article.Thumbnail))
 		if err != nil {
 			slog.Error("Failed to insert article", "error", err.Error())
+		}
+		err = rh.db.Insert([]byte("category:"+string(article.Tag)), []byte(article.Url))
+		if err != nil {
+			slog.Error("Failed to insert article category", "error", err.Error())
 		}
 	}
 	return nil

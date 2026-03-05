@@ -5,9 +5,10 @@ import (
 	"log/slog"
 	"os"
 	"runtime"
+	"time"
 )
 
-// MultiHandler sends records to multiple handlers
+// MultiHandler
 type MultiHandler struct {
 	handlers []slog.Handler
 }
@@ -47,19 +48,20 @@ func (m *MultiHandler) WithGroup(name string) slog.Handler {
 }
 
 func Init(logFile string) {
+	time := time.Now()
+	logFile = "logs/" + logFile
+	logFile = logFile + "_" + time.Format("20060102-150405")
+	logFile += ".json"
 	f, _ := os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 
-	// 1. Console Handler (Standard Text)
 	h1 := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo, AddSource: false})
-
-	// 2. File Handler (JSON for large scale ingestion)
-	h2 := slog.NewJSONHandler(f, &slog.HandlerOptions{Level: slog.LevelInfo, AddSource: true})
+	h2 := slog.NewJSONHandler(f, &slog.HandlerOptions{Level: slog.LevelDebug, AddSource: true})
 
 	combined := &MultiHandler{handlers: []slog.Handler{h1, h2}}
 	slog.SetDefault(slog.New(combined))
 }
 
-// Err adds a stack trace and error to the log
+// stack trace and error to the log
 func Err(err error) slog.Attr {
 	if err == nil {
 		return slog.Attr{}

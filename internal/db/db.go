@@ -45,6 +45,32 @@ func (db *DB) Get(key []byte) ([]byte, error) {
 	return value, err
 }
 
+func (db *DB) Get_Prefix(prefix []byte) ([][]byte, error) {
+	var values [][]byte
+	err := db.db.View(func(txn *badger.Txn) error {
+		opts := badger.DefaultIteratorOptions
+		opts.Prefix = prefix
+		it := txn.NewIterator(opts)
+		defer it.Close()
+
+		for it.Rewind(); it.Valid(); it.Next() {
+			item := it.Item()
+			_ = item.Key()
+			err := item.Value(func(v []byte) error {
+				value := make([]byte, len(v))
+				copy(value, v)
+				values = append(values, value)
+				return nil
+			})
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	return values, err
+}
+
 func (db *DB) Delete(key []byte) error {
 	return db.db.Update(func(txn *badger.Txn) error {
 		return txn.Delete(key)

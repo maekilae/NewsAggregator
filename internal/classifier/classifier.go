@@ -4,10 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
-	"net/http/httputil"
 	"newsaggregator/internal/article"
 	"os"
 	"time"
@@ -60,7 +58,7 @@ You are a precise news classifier. Your task is to process news items and assign
 
 ### Instructions
 1. **Classification:** Assign the most relevant category from the "Allowed Classifications" list.
-2. **Dual Tagging:** If an item fits two categories equally, combine them with a forward slash (e.g., "Political/Geopolitics"). Limit to two categories.
+2. **Dual Tagging:** If an item fits two categories, combine them with a forward slash (e.g., "Political/Geopolitics"). Limit to two categories.
 3. **Strict Adherence:** Use ONLY the categories provided. Do not create new tags.
 4. **Indexing:** Maintain the original order using the 'index' key (starting at 0 for the first news item provided).
 5. **Output:** Return a JSON object containing an "items" array.
@@ -144,8 +142,6 @@ func (c *Classifier) Classify(articles map[string]article.Article) (map[string]a
 	client := &http.Client{
 		Timeout: 10 * time.Second, // Always set a timeout!
 	}
-	dump, _ := httputil.DumpRequest(req, true)
-	fmt.Println(string(dump))
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
@@ -177,10 +173,14 @@ func (c *Classifier) Classify(articles map[string]article.Article) (map[string]a
 	}
 
 	i := 0
-	for _, k := range keys {
-		art := articles[k]
+	for _, _ = range keys {
+		j := result.Items[i].Index
+		art := articles[keys[j]]
 		art.Tag = result.Items[i].Class
-		articles[k] = art
+		if art.Tag == "" {
+			art.Tag = "UNKNOWN"
+		}
+		articles[keys[j]] = art
 		i++
 		if len(result.Items) <= i {
 			break

@@ -2,6 +2,7 @@ package main
 
 import (
 	"log/slog"
+	"newsaggregator/internal/auth"
 	"newsaggregator/internal/classifier"
 	"newsaggregator/internal/db"
 	"newsaggregator/internal/logger"
@@ -9,7 +10,7 @@ import (
 )
 
 func main() {
-	logger.Init("log.json")
+	logger.Init("log")
 	d, err := db.InitDB()
 	if err != nil {
 		slog.Error("Failed to initialize database", slog.String("error", err.Error()))
@@ -24,6 +25,7 @@ func main() {
 		_ = rss_handler.NewRSSHandler(p, d, c)
 		// feed.UpdateFeed()
 	}
+	auth.NewAccessToken(d)
 
 	d.Iterate()
 }

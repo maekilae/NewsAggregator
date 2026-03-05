@@ -1,0 +1,19 @@
+{
+  "log": {
+    "log_file_level": "debug",
+    "console_level": "info"
+  },
+  "api": {
+    "enabled": true,
+    "bearer_token": true,
+    "path": "/api/v1",
+    "port": 8080,
+    "rate_limit": 100
+  },
+  "classifier": {
+    "enabled": true,
+    "model_name": "mistral_small_latest",
+    "provider_endpoint": "https://api.mistral.ai/",
+    "token_env": "MISTRAL_API_TOKEN"
+  }
+}
