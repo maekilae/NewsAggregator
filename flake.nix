@@ -39,6 +39,8 @@
             packages = with pkgs; [
               # go (version is specified by overlay)
               go
+              gcc
+              gopls
 
               # goimports, godoc, etc.
               gotools

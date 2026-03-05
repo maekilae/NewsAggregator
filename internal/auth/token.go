@@ -8,8 +8,6 @@ import (
 	"time"
 )
 
-const HOUR = 3600
-
 type AccessToken struct {
 	token      []byte
 	timeToLive time.Time

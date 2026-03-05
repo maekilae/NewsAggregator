@@ -33,7 +33,10 @@ func NewRSSHandler(url string, db *db.DB, c *classifier.Classifier) *RSSHandler 
 		db:         db,
 		Classifier: c,
 	}
-	rh.UpdateFeed()
+	err := rh.UpdateFeed()
+	if err != nil {
+		slog.Error("Failed to update feed", "url", rh.Url, "error", err)
+	}
 	return rh
 }
 

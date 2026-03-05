@@ -1,3 +1,6 @@
 data
 log.*
 .env
+.direnv
+logs
+log
