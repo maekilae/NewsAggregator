@@ -11,7 +11,7 @@ type WebScraper struct {
 	c *colly.Collector
 }
 
-func InitWebScraper(urls []string) *WebScraper {
+func New(urls []string) *WebScraper {
 	c := colly.NewCollector()
 	return &WebScraper{
 		c,

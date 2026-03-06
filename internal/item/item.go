@@ -7,17 +7,6 @@ import (
 	"newsaggregator/internal/db"
 )
 
-type ItemHandler struct {
-	db    *db.DB
-	Items []Item
-}
-
-func NewItemHandler(db *db.DB) *ItemHandler {
-	return &ItemHandler{
-		db: db,
-	}
-}
-
 type Item struct {
 	Hash        []byte
 	Provider    string
@@ -70,19 +59,6 @@ type ATOMItem struct {
 	Tags        []string `json:"tags"`
 }
 
-func (handler *ItemHandler) GetItem(hash []byte) (*Item, error) {
-	v, err := handler.db.Get(hash)
-	if err != nil {
-		return nil, err
-	}
-	item := &Item{}
-	if err := item.UnmarshalGOB(v); err != nil {
-		return nil, err
-	}
-
-	return item, nil
-}
-
 func (item *Item) MarshalGOB() ([]byte, error) {
 	buf := new(bytes.Buffer)
 	enc := gob.NewEncoder(buf)
@@ -124,7 +100,11 @@ func (item *Item) Insert(db *db.DB) error {
 	if err != nil {
 		return err
 	}
-	if err := db.Insert(hash, gobItem); err != nil {
+	if err := db.Insert(append([]byte("url:"), hash...), gobItem); err != nil {
+		return err
+	}
+	// Tags[0] is the primary category for this item
+	if err := db.Insert(append([]byte("category:"), []byte(item.Tags[0])...), hash); err != nil {
 		return err
 	}
 	return nil

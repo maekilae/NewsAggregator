@@ -30,3 +30,9 @@
   "url": "url to feed e.g. https://www.svt.se/rss.xml"
 }
 ```
+
+### Classifier configuration
+
+If you want the classifier to use a different system message you can provide it by creating an SYSMSG.md file in the config folder i.e. `config/SYSMSG.md`
+
+Default system message can be found in `config/DEFAULT_SYSMSG.md`, note that the file is not read.

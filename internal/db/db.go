@@ -45,7 +45,18 @@ func (db *DB) Get(key []byte) ([]byte, error) {
 	return value, err
 }
 
-func (db *DB) Get_Prefix(prefix []byte) ([][]byte, error) {
+func (db *DB) Exists(key []byte) bool {
+	err := db.db.View(func(txn *badger.Txn) error {
+		_, err := txn.Get(key)
+		return err
+	})
+	if err != nil {
+		return false
+	}
+	return true
+}
+
+func (db *DB) GetByPrefix(prefix []byte) ([][]byte, error) {
 	var values [][]byte
 	err := db.db.View(func(txn *badger.Txn) error {
 		opts := badger.DefaultIteratorOptions

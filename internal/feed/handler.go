@@ -6,92 +6,68 @@ import (
 	"net/http"
 	"newsaggregator/internal/classifier"
 	"newsaggregator/internal/db"
+	"newsaggregator/internal/item"
 	"newsaggregator/internal/webscraper"
 )
-
-type feedItems struct {
-	Keys   []string
-	Values map[string]string
-}
-
-func (f *feedItems) Add(key, value string) {
-	f.Keys = append(f.Keys, key)
-	f.Values[key] = value
-}
-
-func (f *feedItems) Get(key string) (string, bool) {
-	value, ok := f.Values[key]
-	return value, ok
-}
-
-func (f *feedItems) Delete(key string) {
-	for i, k := range f.Keys {
-		if k == key {
-			f.Keys = append(f.Keys[:i], f.Keys[i+1:]...)
-			delete(f.Values, key)
-			return
-		}
-	}
-}
-
-func (f *feedItems) Get_Idx(key string) (int, bool) {
-	for i, k := range f.Keys {
-		if k == key {
-			return i, true
-		}
-	}
-	return -1, false
-}
 
 type FeedHandler struct {
 	db         *db.DB
 	Url        string
-	Items      feedItems
+	Items      *item.ItemHandler
 	Classifier *classifier.Classifier
 	ws         *webscraper.WebScraper
+	outFormat  []string
 }
 
-func NewFeedHandler(url string) *FeedHandler {
-	return &FeedHandler{Url: url}
+func NewFeedHandler(url string, outFormat []string, db *db.DB, keyEnv string, classifierUrl string) *FeedHandler {
+	fh := FeedHandler{
+		db:         db,
+		Url:        url,
+		Items:      item.NewItemHandler(db),
+		Classifier: classifier.New(keyEnv, classifierUrl),
+		ws:         webscraper.New([]string{url}),
+		outFormat:  outFormat,
+	}
+	return &fh
 }
 
-func (h *FeedHandler) GetFeed() {
+func (fh *FeedHandler) UpdateFeed() error {
 
-	slog.Debug("Updating feed", "url", h.Url)
-	resp, err := http.Get(h.Url)
+	slog.Debug("Updating feed", "url", fh.Url)
+	resp, err := http.Get(fh.Url)
 	slog.Debug("Received response", "status", resp.Status)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
 
-	slog.Debug("Parsing feed with URL", "url", h.Url)
-	h.parseFeed(resp.Body)
+	slog.Debug("Parsing feed with URL", "url", fh.Url)
+	fh.parseFeed(resp.Body)
 
-	classArticles, err := h.Classifier.Classify(h.Items)
+	classArticles, err := fh.Classifier.Classify(fh.Items)
 	if err != nil {
 		return err
 	}
-	h.Items = classArticles
+	fh.Items = classArticles
 
-	for _, article := range h.Items {
+	for _, article := range fh.Items {
 		hash := sha256.Sum256([]byte(article.Url))
 		article.UrlHash = hash[:]
-		tn, err := h.db.Get([]byte("url:" + string(article.UrlHash)))
+		tn, err := fh.db.Get([]byte("url:" + string(article.UrlHash)))
 		if err == nil {
 			slog.Debug("Article already exists")
 			article.Thumbnail = string(tn)
 			continue
 		}
-		h.ws.ScrapeMeta(&article)
+		fh.ws.ScrapeMeta(&article)
 		// Classify
 
 		slog.Debug("Inserting article", "url", article.Url)
-		err = h.db.Insert([]byte("url:"+string(article.UrlHash)), []byte(article.Thumbnail))
+		err = fh.db.Insert([]byte("url:"+string(article.UrlHash)), []byte(article.Thumbnail))
 		if err != nil {
 			slog.Error("Failed to insert article", "error", err.Error())
 		}
-		err = h.db.Insert([]byte("category:"+string(article.Tag)), []byte(article.Url))
+		err = fh.db.Insert([]byte("category:"+string(article.Tag)), []byte(article.Url))
 		if err != nil {
 			slog.Error("Failed to insert article category", "error", err.Error())
 		}
